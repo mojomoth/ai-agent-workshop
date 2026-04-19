@@ -187,7 +187,7 @@ claude /logout
 
 #### 첫 실습 예
 ```bash
-cd /workspaces/app
+cd /app
 claude
 # 프롬프트에서:  "app/ 아래에 hello.py 를 만들고 Hello Workshop 을 출력해줘"
 ```
@@ -214,7 +214,7 @@ Codex 는 환경변수가 있으면 그것을 우선적으로 사용합니다.
 
 #### 첫 실습 예
 ```bash
-cd /workspaces/app
+cd /app
 codex
 # 프롬프트에서:  "app/ 아래에 hello.js 를 만들고 콘솔에 Hello Workshop 을 찍어줘"
 ```
@@ -253,7 +253,7 @@ opencode run "app/ 아래에 README 를 하나 생성해줘"
 
 #### 첫 실습 예
 ```bash
-cd /workspaces/app
+cd /app
 opencode
 # 메시지 입력:  "app/hello.ts 를 만들고 타입 안전하게 Hello Workshop 을 출력해줘"
 ```

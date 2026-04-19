@@ -5,7 +5,7 @@ services:
       dockerfile: .devcontainer/Dockerfile
     image: ai-agent-workshop:latest
     container_name: ai-agent-workshop
-    working_dir: /workspaces/app
+    working_dir: /app
     user: vscode
     stdin_open: true
     tty: true
@@ -27,7 +27,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     volumes:
-      - .:/workspaces/app
+      - ./app:/app
       - ./.claude:/home/vscode/.claude
       - ./.codex:/home/vscode/.codex
       - ./.config/opencode:/home/vscode/.config/opencode

@@ -50,4 +50,4 @@ RUN mkdir -p \
         /home/vscode/.cache \
         /home/vscode/.local
 
-WORKDIR /workspaces/app
+WORKDIR /app

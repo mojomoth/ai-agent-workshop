@@ -4,8 +4,8 @@
     "dockerfile": "Dockerfile"
   },
   "remoteUser": "vscode",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/app,type=bind,consistency=cached",
-  "workspaceFolder": "/workspaces/app",
+  "workspaceMount": "source=${localWorkspaceFolder}/app,target=/app,type=bind,consistency=cached",
+  "workspaceFolder": "/app",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -24,7 +24,7 @@
     "source=${localWorkspaceFolder}/.local/share/opencode,target=/home/vscode/.local/share/opencode,type=bind,consistency=cached",
     "source=${localWorkspaceFolder}/.local/state/opencode,target=/home/vscode/.local/state/opencode,type=bind,consistency=cached"
   ],
-  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.local /home/vscode/.config /home/vscode/.cache /home/vscode/.claude /home/vscode/.codex && git config --global --add safe.directory /workspaces/app && node -v && python3 --version && claude --version && codex --version && opencode --version",
+  "postCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.local /home/vscode/.config /home/vscode/.cache /home/vscode/.claude /home/vscode/.codex && git config --global --add safe.directory /app &&node -v && python3 --version && claude --version && codex --version && opencode --version",
   "containerEnv": {
     "SHELL": "/bin/bash"
   }
