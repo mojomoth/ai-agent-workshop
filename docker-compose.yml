@@ -1,0 +1,36 @@
+services:
+  workshop:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    image: ai-agent-workshop:latest
+    container_name: ai-agent-workshop
+    working_dir: /workspaces/app
+    user: vscode
+    stdin_open: true
+    tty: true
+    # bind mount 된 홈 경로들이 root 소유로 잡혀 있어도 vscode 소유로 되돌린 뒤 bash 진입
+    entrypoint:
+      - /bin/bash
+      - -lc
+      - |
+        sudo chown -R vscode:vscode \
+          /home/vscode/.local \
+          /home/vscode/.config \
+          /home/vscode/.cache \
+          /home/vscode/.claude \
+          /home/vscode/.codex 2>/dev/null || true
+        exec "$@"
+    command: ["bash"]
+    environment:
+      SHELL: /bin/bash
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    volumes:
+      - .:/workspaces/app
+      - ./.claude:/home/vscode/.claude
+      - ./.codex:/home/vscode/.codex
+      - ./.config/opencode:/home/vscode/.config/opencode
+      - ./.cache/opencode:/home/vscode/.cache/opencode
+      - ./.local/share/opencode:/home/vscode/.local/share/opencode
+      - ./.local/state/opencode:/home/vscode/.local/state/opencode

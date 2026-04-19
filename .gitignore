@@ -1,0 +1,23 @@
+# Environment
+.env
+
+# Agent config/cache directories - keep structure, ignore contents
+.claude/*
+!.claude/.gitkeep
+.codex/*
+!.codex/.gitkeep
+.config/opencode/*
+!.config/opencode/.gitkeep
+.cache/opencode/*
+!.cache/opencode/.gitkeep
+.local/share/opencode/*
+!.local/share/opencode/.gitkeep
+.local/state/opencode/*
+!.local/state/opencode/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OMC state
+.omc/
