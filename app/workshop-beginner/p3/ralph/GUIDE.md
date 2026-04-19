@@ -5,7 +5,7 @@
 ```
 git init -q
 echo "# ralph loop" > README.md
-git add . && git commit -q -m "init"
+git add . && git commit -q -m "init ralph"
 ```
 
 ## Step 2-2. Ralph의 두 핵심 파일

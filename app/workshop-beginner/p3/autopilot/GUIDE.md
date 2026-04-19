@@ -5,7 +5,7 @@
 ```
 git init -q
 echo "# autopilot lab" > README.md
-git add . && git commit -q -m "init"
+git add . && git commit -q -m "init autopilot"
 ```
 
 ## Step 1-2. 명확한 단일 태스크 정의
