@@ -1,0 +1,48 @@
+{
+  "name": "Practice 3 Ralph Loop Hooks",
+  "description": "Claude hooks configuration for automated task validation and progress tracking",
+  "version": "1.0",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "name": "validate-progress",
+        "matcher": "Write|Edit",
+        "when": "path matches 'fix_plan\\.md|proverbs\\.md'",
+        "command": "bash -c '\nif [ -f fix_plan.md ]; then\n  completed=$(grep -c \"\\[x\\]\" fix_plan.md || echo 0)\n  total=$(grep -c \"\\[\" fix_plan.md || echo 0)\n  if [ $total -gt 0 ]; then\n    percentage=$((completed * 100 / total))\n    echo \"📊 Progress: $completed/$total tasks ($percentage%)\"\n  fi\nfi\n'",
+        "description": "Display progress percentage after fix_plan.md edits",
+        "failureHandling": "warn"
+      },
+      {
+        "name": "detect-all-done",
+        "matcher": "Write|Edit",
+        "when": "path matches 'fix_plan\\.md'",
+        "command": "bash -c '\nif grep -qi \"ALL.DONE\\|✅.*done\" fix_plan.md; then\n  echo \"🎉 ✅ ALL DONE signal detected!\"\n  echo \"⏹️  Ralph loop will terminate after this iteration\"\nelse\n  echo \"⏳ Continuing to next iteration...\"\nfi\n'",
+        "description": "Alert when ALL DONE signal is detected",
+        "failureHandling": "warn"
+      },
+      {
+        "name": "validate-proverb-format",
+        "matcher": "Write|Edit",
+        "when": "path matches 'proverbs\\.md'",
+        "command": "bash -c '\nif grep -q \"원문:\" proverbs.md 2>/dev/null; then\n  count=$(grep -c \"원문:\" proverbs.md)\n  echo \"✅ Found $count proverbs in correct format\"\nelse\n  echo \"⚠️  No proverbs found yet\"\nfi\n'",
+        "description": "Validate proverb structure in proverbs.md",
+        "failureHandling": "warn"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "name": "check-iteration-limit",
+        "matcher": "Read",
+        "when": "filename contains 'ralph'",
+        "command": "bash -c '\nif [ -f .ralph-state.json ] 2>/dev/null; then\n  iteration=$(jq .iteration .ralph-state.json 2>/dev/null || echo \"?\")  \n  echo \"📍 Current iteration: $iteration/30\"\nfi\n'",
+        "description": "Show current iteration before reading ralph-loop.sh",
+        "failureHandling": "ignore"
+      }
+    ]
+  },
+  "notes": {
+    "setup": "Place this file in the practice-3-ralph-harness directory",
+    "activation": "Claude Code will automatically detect and apply these hooks",
+    "manual-setup": "Or copy to ~/.claude/hooks/practice3.json and configure in settings.json"
+  }
+}
