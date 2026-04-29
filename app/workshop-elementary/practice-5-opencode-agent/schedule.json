@@ -1,0 +1,10 @@
+{
+  "version": "1.0",
+  "schedule": [
+    {"round": 1, "start_time": "14:00", "estimated_duration": 50},
+    {"round": 2, "start_time": "14:01", "estimated_duration": 50},
+    {"round": 3, "start_time": "14:02", "estimated_duration": 50},
+    {"round": 4, "start_time": "14:03", "estimated_duration": 50},
+    {"round": 5, "start_time": "14:04", "estimated_duration": 50}
+  ]
+}

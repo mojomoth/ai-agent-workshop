@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "command": "bash -c 'if grep -q \"ALL DONE\" fix_plan.md 2>/dev/null; then echo \"🎉 ALL_DONE 감지 - Ralph 루프 종료 준비\"; else COUNT=$(grep -c \"\\[x\\]\" fix_plan.md 2>/dev/null || echo 0); echo \"✅ 완료된 항목: $COUNT개\"; fi'",
+        "description": "fix_plan.md 진행도 확인"
+      }
+    ]
+  }
+}

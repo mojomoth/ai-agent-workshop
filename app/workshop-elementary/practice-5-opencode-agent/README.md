@@ -185,7 +185,94 @@ https://github.com/opencode/examples/multi-agent
 
 ---
 
-**이 실습은 데모이므로 직접 실행하지 않습니다.**  
-개념만 이해하고 next-level 로드맵으로 진행합니다.
+## 🚀 실행 준비 완료 (Ready to Execute)
+
+**이 실습은 완전히 구성되었으며 즉시 실행 가능합니다.**
+
+### 🎯 빠른 시작 (5분)
+
+#### 1단계: 테스트 실행 (드라이 런)
+```bash
+cd /Users/jeongyounglee/work/repo/ai-agent-workshop/app/workshop-elementary/practice-5-opencode-agent
+./opencode-loop.sh --dry-run --max-rounds 1
+```
+- API 호출 없이 동작 확인
+- 예상 시간: 10초
+
+#### 2단계: 실제 실행
+```bash
+./opencode-loop.sh --max-rounds 5
+```
+- Claude API로 5 라운드 실행
+- 예상 시간: 4분
+- 예상 비용: $2-3
+
+#### 3단계: 진행 상황 모니터링 (다른 터미널)
+```bash
+./task-tracker.sh
+```
+- 실시간 진행도 표시
+- 각 라운드별 통계
+
+### 📊 실행 파일 및 구성
+
+```
+practice-5-opencode-agent/
+├── opencode-loop.sh          ← ⭐ 메인 실행 스크립트 (✅ 실행 권한)
+├── task-tracker.sh           ← 모니터링 도구 (✅ 실행 권한)
+├── opencode-config.json      ← 에이전트 5개 구성
+├── mission.md                ← 진행 상태 (자동 업데이트)
+├── schedule.json             ← 라운드 스케줄
+├── .opencode-state.json      ← 현재 상태
+│
+├── EXECUTION_GUIDE.md        ← 상세 실행 가이드
+├── QUICKSTART.md             ← 5분 가이드
+├── CLAUDE.md                 ← 개념 설명
+├── PROMPT.md                 ← 에이전트 프롬프트
+└── checklist.md              ← 체크리스트
+```
+
+### ✅ 실행 결과 예상
+
+| 항목 | 예상값 |
+|---|---|
+| **총 라운드** | 5/5 완료 |
+| **수집 뉴스** | ~40건 (라운드당 8건) |
+| **요약 생성** | 40개 (한국어 200자) |
+| **Slack 발송** | 5건 |
+| **소요 시간** | 4분 |
+| **총 비용** | $2-3 |
+| **완료 신호** | mission.md에 ✅ ALL_ROUND_COMPLETED |
+
+### 🔧 옵션
+
+```bash
+# 1라운드만 테스트
+./opencode-loop.sh --max-rounds 1
+
+# 더 저렴하게 (haiku만 사용)
+./opencode-loop.sh --max-rounds 5 --model haiku
+
+# 로그 저장
+./opencode-loop.sh --max-rounds 5 2>&1 | tee opencode.log
+
+# Slack 연동 (옵션)
+export SLACK_WEBHOOK_URL="https://hooks.slack.com/..."
+./opencode-loop.sh --max-rounds 5
+```
+
+### 🎓 다음 단계
+
+이 실습 이후:
+
+1. **Ralph + OpenCode 하이브리드**
+   - Ralph 루프로 지속적 개선
+   - 매 라운드마다 OpenCode 병렬 실행
+   - 3배 더 빠르고 2배 저렴
+
+2. **실전 응용**
+   - 자체 데이터 소스 추가
+   - 추가 에이전트 구성
+   - Cron/GitHub Actions 통합
 
 → [다음: Next-Level 로드맵](../README.md#%EB%8B%A4%EB%A8%B8%EB%8B%88-%EB%8B%A8%EA%B3%84-%EB%A1%9C%EB%93%9C%EB%A7%B5)

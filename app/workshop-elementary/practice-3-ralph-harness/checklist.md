@@ -38,9 +38,10 @@
   - [ ] 상태: "진행 중: 라운드 1 시작"
   - [ ] "ALL DONE" 신호 준비됨
 
-- [ ] **hooks.json**: 생성됨 (선택사항)
-  - [ ] PostToolUse 훅 설정
-  - [ ] 진행도 검증 포함
+- [ ] **hooks 설정**: `.claude/settings.json`에 구성됨 (선택사항)
+  - [ ] `.claude/settings.json` 파일 확인
+  - [ ] PostToolUse 훅으로 진행도 추적 활성화
+  - [ ] (참고: `hooks.json`은 문서용이며, 실제 활성화는 `.claude/settings.json`에서)
 
 ### 선택사항 파일
 
@@ -94,7 +95,9 @@
 
 ### Terminal 2: 진행도 모니터링 (선택사항)
 
-- [ ] 다른 터미널에서 task-tracker.sh 실행
+⚠️ **중요**: ralph-loop.sh가 **최소 1회 이상 실행되고 나서** task-tracker.sh를 시작하세요 (fix_plan.md 자동 생성 대기)
+
+- [ ] ralph-loop.sh가 라운드 1을 시작하면, 다른 터미널에서 task-tracker.sh 실행
   ```bash
   ./task-tracker.sh
   ```
