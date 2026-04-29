@@ -1,0 +1,52 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(./**)",
+      "Write(animals/*.txt)",
+      "Edit(ZOO.md)",
+      "Bash(python validate.py:*)",
+      "Bash(python show_zoo.py)",
+      "Bash(ls:*)",
+      "Bash(cat:*)"
+    ],
+    "deny": [
+      "Edit(animals/**)",
+      "Write(validate.py)",
+      "Edit(validate.py)",
+      "Write(show_zoo.py)",
+      "Edit(show_zoo.py)",
+      "Write(PROMPT.md)",
+      "Edit(PROMPT.md)",
+      "Bash(rm:*)",
+      "Bash(mv:*)",
+      "Bash(git:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(pip install:*)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/check-zoo.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/protect-animals.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
