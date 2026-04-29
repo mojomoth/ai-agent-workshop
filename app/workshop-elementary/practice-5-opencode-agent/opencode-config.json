@@ -1,0 +1,202 @@
+{
+  "project": {
+    "name": "Workshop Elementary - Multi-Agent Example",
+    "description": "AI News Crawler using Claude + Haiku with multiple specialized agents",
+    "version": "1.0.0"
+  },
+  "execution": {
+    "mode": "multi-agent",
+    "parallelism": 3,
+    "max_concurrent_tasks": 3,
+    "timeout_per_task_seconds": 60,
+    "retry_attempts": 2,
+    "loop_until": "ALL_ROUND_COMPLETED",
+    "max_rounds": 5,
+    "log_level": "info"
+  },
+  "agents": {
+    "manager": {
+      "name": "Manager",
+      "description": "Orchestrate crawler, summarizer, and notifier agents. Make decisions and validate results.",
+      "model": "claude-sonnet-4-6",
+      "role": "primary",
+      "temperature": 0.7,
+      "top_p": 0.9,
+      "max_tokens": 2000,
+      "system_prompt": "You are the orchestrator. Delegate tasks to crawler, summarizer, and notifier. Track progress in mission.md. Make final decisions.",
+      "permissions": {
+        "read": ["all"],
+        "write": ["mission.md"],
+        "network": true,
+        "timeout_multiplier": 1.5
+      }
+    },
+    "crawler": {
+      "name": "Crawler",
+      "description": "Collect AI news from HackerNews, Reddit, and Arxiv. Return structured JSON.",
+      "model": "claude-haiku-4-5-20251001",
+      "role": "worker",
+      "temperature": 0.5,
+      "top_p": 0.8,
+      "max_tokens": 1500,
+      "system_prompt": "You are a data collector. Fetch news from APIs and return clean JSON: [{\"title\": \"...\", \"url\": \"...\", \"source\": \"...\", \"score\": N}]",
+      "permissions": {
+        "read": ["external_apis"],
+        "write": false,
+        "network": true,
+        "endpoints_allowed": [
+          "https://news.ycombinator.com",
+          "https://reddit.com/r/MachineLearning",
+          "https://arxiv.org",
+          "https://api.github.com"
+        ],
+        "timeout_multiplier": 1.0
+      },
+      "concurrency": 3
+    },
+    "scheduler": {
+      "name": "Scheduler",
+      "description": "Determine next crawl time and manage rate limiting.",
+      "model": "claude-haiku-4-5-20251001",
+      "role": "worker",
+      "temperature": 0.3,
+      "top_p": 0.7,
+      "max_tokens": 500,
+      "system_prompt": "You are a scheduler. Determine the optimal next crawl time based on API rate limits and data freshness.",
+      "permissions": {
+        "read": ["all"],
+        "write": ["mission.md", "schedule.json"],
+        "network": false,
+        "timeout_multiplier": 0.8
+      }
+    },
+    "summarizer": {
+      "name": "Summarizer",
+      "description": "Summarize collected news to 200 Korean characters. Add hashtags and sentiment.",
+      "model": "claude-haiku-4-5-20251001",
+      "role": "worker",
+      "temperature": 0.7,
+      "top_p": 0.85,
+      "max_tokens": 1000,
+      "system_prompt": "You are a summarizer. Create concise 200-character Korean summaries of AI news. Add 2-3 relevant hashtags. Format: \"Summary here\\n#hashtag1 #hashtag2\"",
+      "permissions": {
+        "read": ["all"],
+        "write": false,
+        "network": false,
+        "timeout_multiplier": 0.9
+      }
+    },
+    "notifier": {
+      "name": "Notifier",
+      "description": "Send summarized news to Slack #ai-news channel.",
+      "model": "claude-haiku-4-5-20251001",
+      "role": "worker",
+      "temperature": 0.5,
+      "top_p": 0.8,
+      "max_tokens": 800,
+      "system_prompt": "You are a notifier. Format news summaries into a Slack message. Use blocks for readability. Include timestamp and emoji.",
+      "permissions": {
+        "read": ["all"],
+        "write": true,
+        "network": true,
+        "endpoints_allowed": [
+          "https://hooks.slack.com/services/*"
+        ],
+        "endpoints_denied": ["*"],
+        "timeout_multiplier": 0.7
+      }
+    }
+  },
+  "task_workflow": {
+    "round_structure": [
+      {
+        "phase": 1,
+        "name": "Collect",
+        "agent": "crawler",
+        "parallel_subtasks": 3,
+        "description": "Fetch from HN, Reddit, Arxiv in parallel",
+        "timeout_multiplier": 1.0
+      },
+      {
+        "phase": 2,
+        "name": "Schedule",
+        "agent": "scheduler",
+        "parallel_subtasks": 1,
+        "description": "Determine next crawl time",
+        "depends_on": ["Collect"],
+        "timeout_multiplier": 0.8
+      },
+      {
+        "phase": 3,
+        "name": "Summarize",
+        "agent": "summarizer",
+        "parallel_subtasks": 1,
+        "description": "Generate 200-char summaries",
+        "depends_on": ["Collect"],
+        "timeout_multiplier": 0.9
+      },
+      {
+        "phase": 4,
+        "name": "Notify",
+        "agent": "notifier",
+        "parallel_subtasks": 1,
+        "description": "Send to Slack",
+        "depends_on": ["Summarize"],
+        "timeout_multiplier": 0.7
+      }
+    ]
+  },
+  "output": {
+    "mission_file": "mission.md",
+    "log_file": "opencode.log",
+    "results_file": "results.json",
+    "format": "markdown_and_json"
+  },
+  "cost_tracking": {
+    "enabled": true,
+    "budget_usd": 0.1,
+    "warn_at_percent": 80,
+    "currency": "USD",
+    "provider": "anthropic",
+    "_note": "opencode-loop.sh uses claude -p instead of opencode CLI because opencode run does not support --config and --loop-until flags"
+  },
+  "slack_integration": {
+    "enabled": true,
+    "channel": "#ai-news",
+    "webhook_url_env": "SLACK_WEBHOOK_URL",
+    "message_format": "blocks",
+    "include_metadata": true
+  },
+  "rate_limiting": {
+    "crawler": {
+      "requests_per_minute": 60,
+      "concurrent_requests": 3,
+      "backoff_multiplier": 2
+    },
+    "scheduler": {
+      "min_interval_seconds": 10
+    }
+  },
+  "error_handling": {
+    "retry_on_error": true,
+    "retry_delay_seconds": 5,
+    "max_retries": 2,
+    "continue_on_partial_failure": true,
+    "notify_on_error": true
+  },
+  "monitoring": {
+    "track_execution_time": true,
+    "track_token_usage": true,
+    "track_api_calls": true,
+    "export_metrics": true,
+    "metrics_file": "metrics.json"
+  },
+  "features": {
+    "parallel_execution": true,
+    "dynamic_task_assignment": true,
+    "adaptive_retry": true,
+    "graceful_degradation": true,
+    "task_queuing": true,
+    "progress_tracking": true
+  }
+}

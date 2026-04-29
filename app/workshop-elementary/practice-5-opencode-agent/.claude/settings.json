@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "command": "bash -c 'if grep -q \"✅ ALL_ROUND_COMPLETED\" mission.md 2>/dev/null; then echo \"🎉 ALL_ROUND_COMPLETED 감지 - OpenCode 루프 종료 준비\"; else ROUND=$(grep -o \"Round [0-9]*/[0-9]*\" mission.md 2>/dev/null | tail -1); NEWS=$(grep \"총 뉴스:\" mission.md 2>/dev/null | grep -o \"[0-9]*\" | head -1); echo \"📍 현재: ${ROUND:-시작 전} | 📰 뉴스: ${NEWS:-0}개\"; fi'",
+        "description": "mission.md 멀티에이전트 진행도 확인"
+      }
+    ]
+  }
+}
