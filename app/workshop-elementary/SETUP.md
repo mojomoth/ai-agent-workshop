@@ -187,10 +187,12 @@ workshop-elementary/
 │   └── checklist.md
 └── practice-5-opencode-agent/
     ├── README.md
-    ├── PROMPT.md
-    ├── CLAUDE.md
-    ├── mission.md.template
-    └── checklist.md
+    ├── opencode.json
+    ├── opencode-loop.sh
+    ├── task-tracker.sh
+    ├── mission.md
+    ├── schedule.json
+    └── .claude/settings.json
 ```
 
 확인:

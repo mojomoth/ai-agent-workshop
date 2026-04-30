@@ -1,278 +1,248 @@
-# 실습 5: OpenCode 멀티에이전트 크롤러 (데모)
+# Practice 5: OpenCode 멀티에이전트 크롤러
 
-**목표**: 멀티에이전트 오케스트레이션 이해 (역할 분담 + 권한 분리)
+**목표**: 5명의 AI 에이전트가 협력해서 뉴스 크롤링 → 요약 → 슬랙 발송을 자동화하는 멀티에이전트 시스템
 
-**소요 시간**: 5분  
-**난이도**: ⭐⭐⭐ (고급)  
-**필수 도구**: OpenCode Go (선택)
-
----
-
-## 📖 개요
-
-Ralph 루프 + Codex 검증 다음 단계: **에이전트 분담**
-
-```
-[Manager] 지시
-   ↓
-[Crawler] 수집 ← 병렬 실행
-[Summarizer] 정리
-[Notifier] 발송
-```
-
-Ralph는 같은 프롬프트 반복 → OpenCode는 **역할 분담 + 병렬**
-
-### 왜 멀티에이전트인가?
-
-- 각 에이전트가 한 가지만 집중
-- 동시 실행 → 시간 단축
-- 권한 분리 → 안전 (Notifier는 쓰기만, Crawler는 읽기만)
-- 비싼 모델 → 싼 모델로 분산 (비용 절감)
+**시간**: 5분 (주로 데모 시연)  
+**난이도**: ⭐⭐⭐ (고급)
 
 ---
 
-## 🔄 아키텍처
+## 학습 목표
 
-```json
-{
-  "manager":    "opencode-go/glm-5.1"     ← 비싼 모델 (총괄)
-  "crawler":    "opencode-go/kimi-k2.5"   ← 싼 모델 (수집)
-  "scheduler":  "opencode-go/qwen3.5"     ← 싼 모델 (스케줄)
-  "summarizer": "opencode-go/mimo-v2.5"   ← 싼 모델 (요약)
-  "notifier":   "opencode-go/glm-5"       ← 싼 모델 (발송, write:false)
-}
-```
+이 실습을 마치면 다음을 이해합니다:
 
-**비용 비교:**
-| 구성 | 총 비용 |
-|---|---|
-| 모두 GPT-4 | $50/회 |
-| 모두 Claude-3 | $20/회 |
-| OpenCode Go 혼합 | $2~5/회 ← **10배 저렴** |
+- ✅ **멀티에이전트 아키텍처**: 5명의 에이전트가 각자 역할 수행
+- ✅ **역할 분담**: Crawler, Summarizer, Notifier, Validator, Scheduler
+- ✅ **상태 관리**: `mission.md`로 전체 진행도 추적
+- ✅ **OpenCode 기본**: 오픈소스 모델로 비용 절감
+- ✅ **무한 루프 설계**: 안전한 5라운드 제한
 
 ---
 
-## 🎯 실습 시나리오
+## 구조
 
-### 사용 사례: 24시간 AI 뉴스 크롤러
+### 핵심 파일
+
+| 파일 | 용도 |
+|------|------|
+| `opencode.json` | OpenCode 프로젝트 설정 (에이전트 정의, 역할, 프롬프트) |
+| `opencode-loop.sh` | 멀티에이전트 루프 실행 스크립트 |
+| `mission.md` | 전체 진행도 및 상태 추적 |
+| `task-tracker.sh` | 실시간 진행 모니터링 스크립트 |
+| `schedule.json` | 라운드별 스케줄 상태 |
+| `.claude/settings.json` | Claude Code 로컬 설정 (mission.md 자동 업데이트 후킹) |
+
+### 에이전트 역할 (5명)
+
+```
+┌─────────────────┐
+│ 1. Scheduler    │  (언제, 어디서 시작할지)
+└────────┬────────┘
+         │
+    ┌────▼────┐
+    │ 2. Crawler  │  (뉴스 수집)
+    └────┬────┘
+         │
+    ┌────▼──────────┐
+    │ 3. Summarizer │  (내용 요약)
+    └────┬──────────┘
+         │
+    ┌────▼────────┐
+    │ 4. Validator │  (검증 & 중복제거)
+    └────┬────────┘
+         │
+    ┌────▼────────┐
+    │ 5. Notifier │  (Slack 발송)
+    └─────────────┘
+```
+
+---
+
+## 실행 방법
+
+### 1단계: 설정 확인
 
 ```bash
-while true; do
-  opencode run --agent manager \
-    -p "오늘의 AI 뉴스 5건 수집 → 한국어 요약 → 중복 제거 → 슬랙 발송"
-  sleep 600  # 10분마다
-done
+cd practice-5-opencode-agent
+
+# OpenCode 설정 파일 확인
+cat opencode.json
+
+# 미션 초기 상태 확인
+cat mission.md
 ```
 
-**자동으로 일어나는 일:**
+### 2단계: 드라이런 (선택)
 
-1. **Manager** (GLM-5.1)  
-   "Crawler, 최신 뉴스 가져와"
-   
-2. **Crawler** (Kimi)  
-   HN, Reddit, Arxiv에서 병렬로 수집
-   
-3. **Scheduler** (Qwen)  
-   다음 크롤 시간 결정
-   
-4. **Summarizer** (Mimo)  
-   200자 한국어 요약 생성
-   
-5. **Notifier** (GLM)  
-   슬랙 메시지 발송 (`write: true`)
-   
-6. **repeat**
-
----
-
-## 🔐 권한 분리 패턴
-
-```json
-{
-  "crawler": {
-    "write": false,      ← 읽기만 가능
-    "endpoints": ["https://api.example.com/read"],
-    "timeout": 30
-  },
-  "notifier": {
-    "write": true,       ← 쓰기만 가능
-    "endpoints": ["slack://..."],
-    "rateLimit": 1000
-  }
-}
-```
-
-**이점:**
-- Crawler가 실수로 데이터 지우지 않음
-- Notifier가 API 프록시되지 않음
-- 각 에이전트 = 최소 권한 원칙 (PoLP)
-
----
-
-## 📊 성능
-
-| 구성 | 실행 시간 | 비용 |
-|---|---|---|
-| 단일 에이전트 | 5분 | $20 |
-| Ralph 루프 (5회) | 25분 | $100 |
-| OpenCode 멀티 (병렬) | 1분 | $3 |
-
-**3단계로 갈수록 빨라지고 싸진다.**
-
----
-
-## 🎬 데모 흐름
-
-1. **코드 읽기** (`opencode.json`)
-2. **구성 이해** (Manager → Crawler, Summarizer, Notifier)
-3. **루프 흐름** (mission.md 참고)
-4. **비용 계산** (GLM-5.1 가격표)
-5. **"이게 가능하네" 느끼기**
-
----
-
-## 📝 핵심 개념
-
-| 개념 | 의미 |
-|---|---|
-| **Manager** | 총괄 지휘. 다른 에이전트에게 작업 할당 |
-| **Worker** | 특정 작업만 (Crawler=수집, Notifier=발송) |
-| **Task Queue** | 모든 에이전트가 볼 수 있는 공유 작업 목록 |
-| **권한 분리** | 에이전트별로 읽기/쓰기 제한 |
-| **Cost Optimization** | 싼 모델에 작은 일 할당 |
-
----
-
-## 🚀 실전 응용
-
-### 예 1: 실시간 모니터링
-```
-Manager → [Crawler (API 폴링), Detector (이상 탐지), Alerter (알람)]
-```
-
-### 예 2: 웹 크롤링 + SEO 분석
-```
-Manager → [Crawler (사이트 크롤), Analyzer (SEO), Exporter (CSV)]
-```
-
-### 예 3: 이미지 배치 처리
-```
-Manager → [ImageResizer, Compressor, Uploader] (병렬)
-```
-
----
-
-## 🎓 이 실습에서 배우는 것
-
-1. **멀티에이전트 설계**: 역할 분담의 중요성
-2. **비용 최적화**: 비싼 모델은 선별해서 사용
-3. **병렬 처리**: Ralph 루프보다 빠른 실행
-4. **권한 분리**: 보안과 안정성
-5. **Mission-Based 루프**: Ralph보다 명확한 종료 신호
-
----
-
-## 📖 참고
-
-**OpenCode Go 문서**  
-https://opencode.ai/docs/go
-
-**가격 비교**  
-https://opencode.ai/pricing
-
-**실전 예제**  
-https://github.com/opencode/examples/multi-agent
-
----
-
-## 🚀 실행 준비 완료 (Ready to Execute)
-
-**이 실습은 완전히 구성되었으며 즉시 실행 가능합니다.**
-
-### 🎯 빠른 시작 (5분)
-
-#### 1단계: 테스트 실행 (드라이 런)
 ```bash
-cd /Users/jeongyounglee/work/repo/ai-agent-workshop/app/workshop-elementary/practice-5-opencode-agent
-./opencode-loop.sh --dry-run --max-rounds 1
+# 실제 발송 없이 프로세스만 테스트
+./opencode-loop.sh --dry-run
 ```
-- API 호출 없이 동작 확인
-- 예상 시간: 10초
 
-#### 2단계: 실제 실행
+### 3단계: 실행
+
 ```bash
-./opencode-loop.sh --max-rounds 5
+# 실제로 멀티에이전트 루프 시작
+./opencode-loop.sh
+
+# 또는 백그라운드에서 실행
+./opencode-loop.sh &
 ```
-- Claude API로 5 라운드 실행
-- 예상 시간: 4분
-- 예상 비용: $2-3
 
-#### 3단계: 진행 상황 모니터링 (다른 터미널)
+### 4단계: 모니터링 (다른 터미널)
+
 ```bash
+# 실시간 진행도 추적
 ./task-tracker.sh
-```
-- 실시간 진행도 표시
-- 각 라운드별 통계
 
-### 📊 실행 파일 및 구성
-
-```
-practice-5-opencode-agent/
-├── opencode-loop.sh          ← ⭐ 메인 실행 스크립트 (✅ 실행 권한)
-├── task-tracker.sh           ← 모니터링 도구 (✅ 실행 권한)
-├── opencode-config.json      ← 에이전트 5개 구성
-├── mission.md                ← 진행 상태 (자동 업데이트)
-├── schedule.json             ← 라운드 스케줄
-├── .opencode-state.json      ← 현재 상태
-│
-├── EXECUTION_GUIDE.md        ← 상세 실행 가이드
-├── QUICKSTART.md             ← 5분 가이드
-├── CLAUDE.md                 ← 개념 설명
-├── PROMPT.md                 ← 에이전트 프롬프트
-└── checklist.md              ← 체크리스트
+# 또는 수동으로
+watch -n 2 'cat mission.md | tail -20'
 ```
 
-### ✅ 실행 결과 예상
+---
 
-| 항목 | 예상값 |
+## 무엇을 보게 될까?
+
+### Round 1 (20초)
+
+```
+📍 Round 1/5
+🔄 Scheduler: Planning...
+🔄 Crawler: Fetching AI news...
+⏳ Waiting for crawler...
+```
+
+### Round 2-4 (진행 중)
+
+```
+📍 Round 2/5
+✅ Crawler: Collected 5 articles
+🔄 Summarizer: Processing...
+🔄 Validator: Checking duplicates...
+📊 Progress: 10/15 articles
+```
+
+### Round 5 (완료)
+
+```
+📍 Round 5/5
+✅ Crawler: Collected 15 articles total
+✅ Summarizer: 15 summaries
+✅ Validator: 12 unique (3 filtered)
+✅ Notifier: Sent to Slack
+✅ ALL ROUNDS COMPLETED
+
+📈 Final Stats:
+   Total Articles: 15
+   Unique: 12
+   Duration: 2min 30sec
+   Last sent: 14:05 KST
+```
+
+---
+
+## 결과물
+
+### mission.md 최종 상태
+
+```markdown
+# AI 뉴스 크롤러 Mission
+
+목표: AI 뉴스 수집 → 요약 → Slack 발송
+
+...
+
+## 최종 결과
+| 지표 | 값 |
 |---|---|
-| **총 라운드** | 5/5 완료 |
-| **수집 뉴스** | ~40건 (라운드당 8건) |
-| **요약 생성** | 40개 (한국어 200자) |
-| **Slack 발송** | 5건 |
-| **소요 시간** | 4분 |
-| **총 비용** | $2-3 |
-| **완료 신호** | mission.md에 ✅ ALL_ROUND_COMPLETED |
+| 총 라운드 | 5/5 |
+| 총 뉴스 | 15 |
+| 총 시간 | 2분 30초 |
+| 중복 제거 | 3 |
+| 에러 발생 | 0 |
+| 슬랙 발송 | 12 |
+| 마지막 발송 | 14:05 KST |
 
-### 🔧 옵션
+## 종료 신호
+✅ ALL_ROUND_COMPLETED
+```
+
+---
+
+## 핵심 개념
+
+### 1. 멀티에이전트 협력 (Multi-Agent Orchestration)
+
+```
+에이전트들이 순차적으로 작업을 넘기며 협력:
+Crawler → Summarizer → Validator → Notifier
+```
+
+### 2. 상태 기반 진행도 추적
+
+```
+mission.md가 "공유 메모리" 역할:
+- 각 에이전트가 상태 업데이트
+- 다음 에이전트가 이전 상태를 읽음
+- 전체 진행도를 한 파일에서 추적
+```
+
+### 3. 안전한 무한 루프 설계
 
 ```bash
-# 1라운드만 테스트
-./opencode-loop.sh --max-rounds 1
-
-# 더 저렴하게 (haiku만 사용)
-./opencode-loop.sh --max-rounds 5 --model haiku
-
-# 로그 저장
-./opencode-loop.sh --max-rounds 5 2>&1 | tee opencode.log
-
-# Slack 연동 (옵션)
-export SLACK_WEBHOOK_URL="https://hooks.slack.com/..."
-./opencode-loop.sh --max-rounds 5
+Max Rounds: 5  # 무한 루프 방지
+Timeout: 5min per round  # 행(hang) 방지
+Error Recovery: 자동 재시도
 ```
 
-### 🎓 다음 단계
+---
 
-이 실습 이후:
+## Troubleshooting
 
-1. **Ralph + OpenCode 하이브리드**
-   - Ralph 루프로 지속적 개선
-   - 매 라운드마다 OpenCode 병렬 실행
-   - 3배 더 빠르고 2배 저렴
+### 문제 1: OpenCode CLI가 설치되지 않음
 
-2. **실전 응용**
-   - 자체 데이터 소스 추가
-   - 추가 에이전트 구성
-   - Cron/GitHub Actions 통합
+```bash
+# OpenCode 설치 (공식)
+curl https://opencode.ai/install | bash
 
-→ [다음: Next-Level 로드맵](../README.md#%EB%8B%A4%EB%A8%B8%EB%8B%88-%EB%8B%A8%EA%B3%84-%EB%A1%9C%EB%93%9C%EB%A7%B5)
+# 확인
+opencode --version
+```
+
+### 문제 2: Slack 발송 실패
+
+```bash
+# SLACK_WEBHOOK_URL 확인
+echo $SLACK_WEBHOOK_URL
+
+# .env 파일에 추가
+export SLACK_WEBHOOK_URL="https://hooks.slack.com/..."
+```
+
+### 문제 3: 5라운드가 끝나도 "ALL_ROUND_COMPLETED" 없음
+
+```bash
+# mission.md 직접 확인
+tail -20 mission.md
+
+# 수동 종료
+pkill opencode-loop
+```
+
+---
+
+## 다음 단계
+
+- 🎓 **본 실습**: 멀티에이전트의 기본 구조 이해
+- 📈 **고급**: OpenCode를 프로덕션 시스템으로 확장
+  - 실제 API (HackerNews, Medium 등) 연결
+  - 데이터베이스에 저장
+  - 웹 대시보드 추가
+
+---
+
+## 참고
+
+- 📖 [OpenCode 공식 가이드](https://opencode.ai/docs)
+- 🔧 [opencode.json 스키마](./opencode.json)
+- 📊 [mission.md 형식](./mission.md)
